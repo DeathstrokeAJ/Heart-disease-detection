@@ -1,15 +1,9 @@
 import streamlit as st
 import pandas as pd
 import numpy as np
-import matplotlib.pyplot as plt
-import seaborn as sns
-import plotly.express as px
-import plotly.graph_objects as go
 from sklearn.model_selection import train_test_split
 from sklearn.ensemble import RandomForestClassifier
-from sklearn.metrics import accuracy_score, confusion_matrix, classification_report
-from sklearn.preprocessing import StandardScaler
-import shap
+from sklearn.metrics import accuracy_score
 
 # Page configuration with custom theme
 st.set_page_config(
@@ -52,23 +46,49 @@ st.markdown("""
         border-radius: 5px;
         margin-bottom: 15px;
     }
-    .stProgress .st-bo {
-        background-color: #1E88E5;
-    }
     .feature-container {
         background-color: #f8f9fa;
         padding: 20px;
         border-radius: 10px;
         margin-bottom: 20px;
     }
+    .metric-container {
+        background-color: #f1f8e9;
+        border-radius: 10px;
+        padding: 20px;
+        text-align: center;
+        box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+    }
+    .metric-value {
+        font-size: 2rem;
+        font-weight: bold;
+        color: #2e7d32;
+    }
+    .metric-label {
+        font-size: 1rem;
+        color: #555;
+    }
+    .feature-bar {
+        background-color: #e3f2fd;
+        border-radius: 5px;
+        margin-bottom: 8px;
+        overflow: hidden;
+    }
+    .feature-fill {
+        background-color: #1e88e5;
+        color: white;
+        padding: 8px;
+        text-align: left;
+        font-weight: bold;
+    }
 </style>
 """, unsafe_allow_html=True)
 
 # Sidebar for navigation and information
 with st.sidebar:
-    st.image("https://img.icons8.com/fluency/96/000000/heart-with-pulse.png", width=80)
+    st.markdown("# 💖 Heart Disease Predictor")
     st.markdown("## Navigation")
-    page = st.radio("", ["Prediction", "Model Insights", "Dataset Explorer"])
+    page = st.radio("", ["Prediction", "Model Metrics", "Data Overview"])
     
     st.markdown("---")
     st.markdown("## About")
@@ -77,7 +97,7 @@ with st.sidebar:
     
     The model used is a Random Forest classifier trained on the Heart Disease UCI dataset.
     
-    Made with ❤️ by Your Healthcare AI Team
+    Made with ❤ by Your Healthcare AI Team
     """)
 
 # Function to load data and model
@@ -89,18 +109,13 @@ def load_data():
     y = df["target"]
     X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=0)
     
-    # Normalize data for better model performance
-    scaler = StandardScaler()
-    X_train_scaled = scaler.fit_transform(X_train)
-    X_test_scaled = scaler.transform(X_test)
-    
     # Train RandomForest Model
-    rf_model = RandomForestClassifier(n_estimators=100, random_state=42, max_depth=10)
-    rf_model.fit(X_train_scaled, y_train)
+    rf_model = RandomForestClassifier(n_estimators=100, random_state=42)
+    rf_model.fit(X_train, y_train)
     
-    return df, X, y, X_train, X_test, y_train, y_test, X_train_scaled, X_test_scaled, rf_model, scaler
+    return df, X, y, X_train, X_test, y_train, y_test, rf_model
 
-df, X, y, X_train, X_test, y_train, y_test, X_train_scaled, X_test_scaled, rf_model, scaler = load_data()
+df, X, y, X_train, X_test, y_train, y_test, rf_model = load_data()
 
 # Feature descriptions for tooltips
 feature_descriptions = {
@@ -119,16 +134,6 @@ feature_descriptions = {
     "thal": "Thalassemia (1 = normal, 2 = fixed defect, 3 = reversible defect)"
 }
 
-# Function to make a prediction
-def predict_heart_disease(input_data, model, scaler):
-    # Scale the input data
-    scaled_input = scaler.transform(input_data)
-    # Make prediction
-    prediction = model.predict(scaled_input)[0]
-    # Get prediction probability
-    prediction_proba = model.predict_proba(scaled_input)[0][1]
-    return prediction, prediction_proba
-
 # Prediction Page
 if page == "Prediction":
     st.markdown("<h1 class='main-header'>💖 Heart Disease Prediction</h1>", unsafe_allow_html=True)
@@ -136,7 +141,7 @@ if page == "Prediction":
     st.markdown("<div class='info-box'>Enter patient clinical information below to predict heart disease risk. Hover over each feature for more information.</div>", unsafe_allow_html=True)
     
     # Create tabs for different input methods
-    input_method = st.radio("Choose input method:", ["Form Input", "Slider Input", "Quick Sample Cases"])
+    input_method = st.radio("Choose input method:", ["Form Input", "Quick Sample Cases"])
     
     user_input = {}
     
@@ -177,38 +182,6 @@ if page == "Prediction":
         
         st.markdown("</div>", unsafe_allow_html=True)
     
-    elif input_method == "Slider Input":
-        st.markdown("<div class='feature-container'>", unsafe_allow_html=True)
-        
-        # General features with sliders
-        for col in X.columns:
-            if col in ["sex", "fbs", "exang"]:
-                user_input[col] = st.select_slider(
-                    f"{col}", 
-                    options=[0, 1], 
-                    value=int(df[col].median()),
-                    format_func=lambda x: "No" if x == 0 else "Yes",
-                    help=feature_descriptions[col]
-                )
-            elif col in ["cp", "restecg", "slope", "ca", "thal"]:
-                options = range(int(df[col].min()), int(df[col].max()) + 1)
-                user_input[col] = st.select_slider(
-                    f"{col}", 
-                    options=options, 
-                    value=int(df[col].median()),
-                    help=feature_descriptions[col]
-                )
-            else:
-                user_input[col] = st.slider(
-                    f"{col}", 
-                    float(df[col].min()), 
-                    float(df[col].max()), 
-                    float(df[col].median()),
-                    help=feature_descriptions[col]
-                )
-        
-        st.markdown("</div>", unsafe_allow_html=True)
-    
     else:  # Quick Sample Cases
         st.markdown("<div class='feature-container'>", unsafe_allow_html=True)
         
@@ -238,9 +211,9 @@ if page == "Prediction":
         col1, col2 = st.columns(2)
         for i, (key, value) in enumerate(user_input.items()):
             if i % 2 == 0:
-                col1.write(f"**{key}**: {value}")
+                col1.write(f"{key}: {value}")
             else:
-                col2.write(f"**{key}**: {value}")
+                col2.write(f"{key}: {value}")
         
         st.markdown("</div>", unsafe_allow_html=True)
     
@@ -253,119 +226,147 @@ if page == "Prediction":
             input_df = pd.DataFrame([user_input])
             
             # Make prediction
-            prediction, prediction_proba = predict_heart_disease(input_df, rf_model, scaler)
+            prediction = rf_model.predict(input_df)[0]
+            prediction_proba = rf_model.predict_proba(input_df)[0][1]
             
             # Display results
             st.markdown("<h2 class='sub-header'>Prediction Results</h2>", unsafe_allow_html=True)
             
-            col1, col2 = st.columns([3, 2])
+            # Create a stylized result box
+            if prediction == 1:
+                st.markdown(f"""
+                <div class='result-box positive-result'>
+                    <h3>⚠ Heart Disease Detected</h3>
+                    <p>The model predicts a <b>{prediction_proba:.1%}</b> probability of heart disease.</p>
+                    <p><b>Recommendation:</b> Further cardiac evaluation is strongly recommended.</p>
+                </div>
+                """, unsafe_allow_html=True)
+            else:
+                st.markdown(f"""
+                <div class='result-box negative-result'>
+                    <h3>✅ No Heart Disease Detected</h3>
+                    <p>The model predicts a <b>{1-prediction_proba:.1%}</b> probability of no heart disease.</p>
+                    <p><b>Recommendation:</b> Continue regular health check-ups.</p>
+                </div>
+                """, unsafe_allow_html=True)
             
-            with col1:
-                # Create a stylized result box
-                if prediction == 1:
-                    st.markdown(f"""
-                    <div class='result-box positive-result'>
-                        <h3>⚠️ Heart Disease Detected</h3>
-                        <p>The model predicts a <b>{prediction_proba:.1%}</b> probability of heart disease.</p>
-                        <p><b>Recommendation:</b> Further cardiac evaluation is strongly recommended.</p>
-                    </div>
-                    """, unsafe_allow_html=True)
-                else:
-                    st.markdown(f"""
-                    <div class='result-box negative-result'>
-                        <h3>✅ No Heart Disease Detected</h3>
-                        <p>The model predicts a <b>{1-prediction_proba:.1%}</b> probability of no heart disease.</p>
-                        <p><b>Recommendation:</b> Continue regular health check-ups.</p>
-                    </div>
-                    """, unsafe_allow_html=True)
-            
-            with col2:
-                # Gauge chart for probability visualization
-                fig = go.Figure(go.Indicator(
-                    mode="gauge+number",
-                    value=prediction_proba * 100,
-                    domain={'x': [0, 1], 'y': [0, 1]},
-                    title={'text': "Heart Disease Risk", 'font': {'size': 24}},
-                    gauge={
-                        'axis': {'range': [0, 100], 'tickwidth': 1, 'tickcolor': "darkblue"},
-                        'bar': {'color': "#19D3F3" if prediction_proba < 0.5 else "#FF4B4B"},
-                        'bgcolor': "white",
-                        'borderwidth': 2,
-                        'bordercolor': "gray",
-                        'steps': [
-                            {'range': [0, 30], 'color': '#c8e6c9'},
-                            {'range': [30, 70], 'color': '#fff9c4'},
-                            {'range': [70, 100], 'color': '#ffcdd2'}
-                        ],
-                    }
-                    ))
-                st.plotly_chart(fig, use_container_width=True)
+            # Progress bar for risk visualization
+            st.markdown("### Risk Level")
+            st.progress(prediction_proba)
+            st.write(f"Risk Score: {prediction_proba:.1%}")
             
             # Feature importance for this prediction
             st.markdown("<h3 class='sub-header'>Key Factors Influencing This Prediction</h3>", unsafe_allow_html=True)
             
-            # Get feature importances for this specific prediction
-            explainer = shap.TreeExplainer(rf_model)
-            shap_values = explainer.shap_values(input_df)
-            
-            # Convert to DataFrame for easier display
+            # Get feature importances
+            importances = rf_model.feature_importances_
             feature_importance = pd.DataFrame({
-                'Feature': input_df.columns,
-                'Importance': np.abs(shap_values[1][0]),
-                'Value': input_df.values[0]
-            })
-            feature_importance = feature_importance.sort_values('Importance', ascending=False).head(6)
+                'Feature': X.columns,
+                'Importance': importances
+            }).sort_values('Importance', ascending=False).head(6)
             
-            # Display in a more visual way
-            fig = px.bar(
-                feature_importance,
-                x='Importance',
-                y='Feature',
-                orientation='h',
-                title='Top 6 Features Influencing Prediction',
-                color='Importance',
-                color_continuous_scale='Blues',
-                text='Value'
-            )
-            fig.update_layout(height=400)
-            st.plotly_chart(fig, use_container_width=True)
+            # Create a simple bar chart with HTML
+            for idx, row in feature_importance.iterrows():
+                feature = row['Feature']
+                importance = row['Importance']
+                width = int(importance * 100)  # Scale to percentage
+                st.markdown(f"""
+                <div class="feature-bar">
+                    <div class="feature-fill" style="width: {width}%">
+                        {feature}: {importance:.3f}
+                    </div>
+                </div>
+                """, unsafe_allow_html=True)
 
-# Model Insights Page
-elif page == "Model Insights":
-    st.markdown("<h1 class='main-header'>Model Insights & Performance</h1>", unsafe_allow_html=True)
-    
-    # Metrics
-    st.markdown("<h2 class='sub-header'>Model Performance Metrics</h2>", unsafe_allow_html=True)
+# Model Metrics Page
+elif page == "Model Metrics":
+    st.markdown("<h1 class='main-header'>Model Performance Metrics</h1>", unsafe_allow_html=True)
     
     # Calculate metrics
-    y_pred = rf_model.predict(X_test_scaled)
+    y_pred = rf_model.predict(X_test)
     accuracy = accuracy_score(y_test, y_pred)
-    conf_matrix = confusion_matrix(y_test, y_pred)
     
-    # Display metrics
+    # Create confusion matrix for display
+    from collections import Counter
+    pred_counts = Counter(y_pred)
+    true_counts = Counter(y_test)
+    true_positive = sum((a == 1 and b == 1) for a, b in zip(y_test, y_pred))
+    true_negative = sum((a == 0 and b == 0) for a, b in zip(y_test, y_pred))
+    false_positive = sum((a == 0 and b == 1) for a, b in zip(y_test, y_pred))
+    false_negative = sum((a == 1 and b == 0) for a, b in zip(y_test, y_pred))
+    
+    # Calculate precision and recall
+    precision = true_positive / (true_positive + false_positive) if (true_positive + false_positive) > 0 else 0
+    recall = true_positive / (true_positive + false_negative) if (true_positive + false_negative) > 0 else 0
+    f1 = 2 * precision * recall / (precision + recall) if (precision + recall) > 0 else 0
+    
+    # Display metrics in a nicer format
     col1, col2, col3 = st.columns(3)
     
-    with col1:
-        st.metric("Accuracy", f"{accuracy:.2%}")
+   with col1:
+        st.markdown("""
+        <div class="metric-container">
+            <div class="metric-value">{:.2%}</div>
+            <div class="metric-label">Accuracy</div>
+        </div>
+        """.format(accuracy), unsafe_allow_html=True)
     
     with col2:
-        precision = conf_matrix[1, 1] / (conf_matrix[1, 1] + conf_matrix[0, 1]) if (conf_matrix[1, 1] + conf_matrix[0, 1]) > 0 else 0
-        st.metric("Precision", f"{precision:.2%}")
+        st.markdown("""
+        <div class="metric-container">
+            <div class="metric-value">{:.2%}</div>
+            <div class="metric-label">Precision</div>
+        </div>
+        """.format(precision), unsafe_allow_html=True)
     
     with col3:
-        recall = conf_matrix[1, 1] / (conf_matrix[1, 1] + conf_matrix[1, 0]) if (conf_matrix[1, 1] + conf_matrix[1, 0]) > 0 else 0
-        st.metric("Recall", f"{recall:.2%}")
+        st.markdown("""
+        <div class="metric-container">
+            <div class="metric-value">{:.2%}</div>
+            <div class="metric-label">Recall</div>
+        </div>
+        """.format(recall), unsafe_allow_html=True)
     
     # Confusion Matrix
-    st.markdown("<h3>Confusion Matrix</h3>", unsafe_allow_html=True)
+    st.markdown("<h2 class='sub-header'>Confusion Matrix</h2>", unsafe_allow_html=True)
     
-    fig, ax = plt.subplots(figsize=(8, 6))
-    sns.heatmap(conf_matrix, annot=True, fmt='d', cmap='Blues', ax=ax,
-                xticklabels=['No Disease', 'Heart Disease'],
-                yticklabels=['No Disease', 'Heart Disease'])
-    plt.ylabel('Actual')
-    plt.xlabel('Predicted')
-    st.pyplot(fig)
+    # Create a simple HTML table for confusion matrix
+    st.markdown("""
+    <table style="width:100%; border-collapse: collapse; text-align: center; margin: 20px 0;">
+        <tr>
+            <th colspan="2" rowspan="2" style="background-color: #f1f8e9; padding: 10px;"></th>
+            <th colspan="2" style="background-color: #f1f8e9; padding: 10px;">Predicted</th>
+        </tr>
+        <tr>
+            <th style="background-color: #f1f8e9; padding: 10px;">No Disease (0)</th>
+            <th style="background-color: #f1f8e9; padding: 10px;">Heart Disease (1)</th>
+        </tr>
+        <tr>
+            <th rowspan="2" style="background-color: #f1f8e9; padding: 10px;">Actual</th>
+            <th style="background-color: #f1f8e9; padding: 10px;">No Disease (0)</th>
+            <td style="background-color: #c8e6c9; padding: 15px; font-weight: bold;">{}</td>
+            <td style="background-color: #ffcdd2; padding: 15px; font-weight: bold;">{}</td>
+        </tr>
+        <tr>
+            <th style="background-color: #f1f8e9; padding: 10px;">Heart Disease (1)</th>
+            <td style="background-color: #ffcdd2; padding: 15px; font-weight: bold;">{}</td>
+            <td style="background-color: #c8e6c9; padding: 15px; font-weight: bold;">{}</td>
+        </tr>
+    </table>
+    """.format(true_negative, false_positive, false_negative, true_positive), unsafe_allow_html=True)
+    
+    # Display explanation of confusion matrix
+    st.markdown("""
+    <div class="info-box">
+        <h4>Confusion Matrix Explanation:</h4>
+        <ul>
+            <li><strong>True Negatives ({}):</strong> Correctly predicted as No Heart Disease</li>
+            <li><strong>False Positives ({}):</strong> Incorrectly predicted as Heart Disease</li>
+            <li><strong>False Negatives ({}):</strong> Incorrectly predicted as No Heart Disease</li>
+            <li><strong>True Positives ({}):</strong> Correctly predicted as Heart Disease</li>
+        </ul>
+    </div>
+    """.format(true_negative, false_positive, false_negative, true_positive), unsafe_allow_html=True)
     
     # Feature Importance
     st.markdown("<h2 class='sub-header'>Feature Importance</h2>", unsafe_allow_html=True)
@@ -377,32 +378,24 @@ elif page == "Model Insights":
         'Importance': importances
     }).sort_values('Importance', ascending=False)
     
-    # Display with Plotly
-    fig = px.bar(
-        feature_importance,
-        x='Importance',
-        y='Feature',
-        orientation='h',
-        title='Feature Importance in Model',
-        color='Importance',
-        color_continuous_scale='Viridis',
-    )
-    fig.update_layout(height=500)
-    st.plotly_chart(fig, use_container_width=True)
+    # Create a simple bar chart with HTML
+    for idx, row in feature_importance.iterrows():
+        feature = row['Feature']
+        importance = row['Importance']
+        width = int(importance * 100)  # Scale to percentage
+        st.markdown(f"""
+        <div class="feature-bar">
+            <div class="feature-fill" style="width: {width}%">
+                {feature}: {importance:.3f}
+            </div>
+        </div>
+        """, unsafe_allow_html=True)
     
-    # SHAP Values
-    st.markdown("<h2 class='sub-header'>SHAP Values - Feature Impact</h2>", unsafe_allow_html=True)
+    # Feature descriptions
+    st.markdown("<h3>Feature Descriptions</h3>", unsafe_allow_html=True)
     
-    # Use SHAP for more detailed feature importance
-    with st.spinner("Calculating SHAP values..."):
-        explainer = shap.TreeExplainer(rf_model)
-        shap_values = explainer.shap_values(X_test_scaled)
-        
-        # Plot SHAP summary
-        st.write("SHAP Summary Plot")
-        fig, ax = plt.subplots(figsize=(10, 8))
-        shap.summary_plot(shap_values[1], X_test_scaled, feature_names=X.columns, show=False)
-        st.pyplot(fig)
+    for feature, description in feature_descriptions.items():
+        st.markdown(f"{feature}: {description}")
 
 # Dataset Explorer Page
 else:
@@ -414,133 +407,121 @@ else:
     col1, col2 = st.columns([1, 1])
     
     with col1:
-        st.write(f"**Total Samples:** {len(df)}")
-        st.write(f"**Positive Cases:** {df['target'].sum()}")
-        st.write(f"**Negative Cases:** {len(df) - df['target'].sum()}")
+        st.write(f"*Total Samples:* {len(df)}")
+        st.write(f"*Positive Cases:* {df['target'].sum()}")
+        st.write(f"*Negative Cases:* {len(df) - df['target'].sum()}")
+        st.write(f"*Number of Features:* {df.shape[1] - 1}")
     
     with col2:
-        # Pie chart for target distribution
-        fig = px.pie(
-            df, 
-            names='target', 
-            title='Distribution of Heart Disease Cases',
-            color='target',
-            color_discrete_map={0: '#91C4F2', 1: '#FF9999'},
-            labels={0: 'No Disease', 1: 'Heart Disease'}
-        )
-        st.plotly_chart(fig, use_container_width=True)
+        # Create a simple HTML chart for target distribution
+        positive_count = df['target'].sum()
+        negative_count = len(df) - positive_count
+        positive_percent = positive_count / len(df) * 100
+        negative_percent = negative_count / len(df) * 100
+        
+        st.markdown("""
+        <h3>Target Distribution</h3>
+        <div style="background-color: #e3f2fd; border-radius: 5px; padding: 10px; margin-bottom: 10px;">
+            <div style="display: flex; align-items: center;">
+                <div style="width: {}%; background-color: #FF9999; padding: 10px; text-align: center; border-radius: 5px 0 0 5px;">
+                    Heart Disease: {}%
+                </div>
+                <div style="width: {}%; background-color: #91C4F2; padding: 10px; text-align: center; border-radius: 0 5px 5px 0;">
+                    No Disease: {}%
+                </div>
+            </div>
+        </div>
+        """.format(positive_percent, round(positive_percent, 1), negative_percent, round(negative_percent, 1)), unsafe_allow_html=True)
     
     # Data Exploration
     exploration_option = st.selectbox(
         "Choose exploration option:",
-        ["Data Table", "Correlation Analysis", "Feature Distributions"]
+        ["Data Table", "Statistical Summary", "Feature Analysis"]
     )
     
     if exploration_option == "Data Table":
         st.markdown("<h3>Data Table</h3>", unsafe_allow_html=True)
-        st.dataframe(df.style.background_gradient(cmap='Blues', subset=['age', 'trestbps', 'chol', 'thalach']), use_container_width=True)
-        
-        # Data description
+        st.dataframe(df, use_container_width=True)
+    
+    elif exploration_option == "Statistical Summary":
         st.markdown("<h3>Statistical Summary</h3>", unsafe_allow_html=True)
-        st.dataframe(df.describe().style.background_gradient(cmap='Greens'), use_container_width=True)
+        st.dataframe(df.describe(), use_container_width=True)
+        
+        # Additional stats
+        st.markdown("<h3>Additional Statistics</h3>", unsafe_allow_html=True)
+        col1, col2 = st.columns(2)
+        
+        with col1:
+            st.write("*Missing Values:*")
+            st.write(df.isnull().sum().to_dict())
+        
+        with col2:
+            st.write("*Data Types:*")
+            st.write(df.dtypes.astype(str).to_dict())
     
-    elif exploration_option == "Correlation Analysis":
-        st.markdown("<h3>Correlation Heatmap</h3>", unsafe_allow_html=True)
+    else:  # Feature Analysis
+        st.markdown("<h3>Feature Analysis</h3>", unsafe_allow_html=True)
         
-        # Calculate correlation matrix
-        corr_matrix = df.corr()
+        # Select a feature to analyze
+        selected_feature = st.selectbox("Select a feature to analyze:", X.columns)
         
-        # Plotly heatmap
-        fig = px.imshow(
-            corr_matrix,
-            title="Feature Correlation Matrix",
-            color_continuous_scale='RdBu_r',
-            zmin=-1, zmax=1
-        )
-        st.plotly_chart(fig, use_container_width=True)
+        # Display basic statistics
+        st.write(f"*Statistics for {selected_feature}:*")
+        st.write(df[selected_feature].describe())
         
-        # Feature correlation with target
-        st.markdown("<h3>Feature Correlation with Target</h3>", unsafe_allow_html=True)
+        # Create a simple histogram with HTML
+        st.markdown("<h4>Distribution by Heart Disease Status</h4>", unsafe_allow_html=True)
         
-        target_corr = corr_matrix['target'].drop('target').sort_values(ascending=False)
-        fig = px.bar(
-            x=target_corr.values,
-            y=target_corr.index,
-            orientation='h',
-            title='Feature Correlation with Heart Disease',
-            color=target_corr.values,
-            color_continuous_scale='RdBu_r',
-            labels={'x': 'Correlation', 'y': 'Feature'}
-        )
-        st.plotly_chart(fig, use_container_width=True)
-    
-    else:  # Feature Distributions
-        st.markdown("<h3>Feature Distributions</h3>", unsafe_allow_html=True)
+        # Compute values for display
+        positive_values = df[df['target'] == 1][selected_feature]
+        negative_values = df[df['target'] == 0][selected_feature]
         
-        # Select features to plot
-        features_to_plot = st.multiselect(
-            "Select features to plot:",
-            options=X.columns,
-            default=['age', 'chol', 'thalach', 'oldpeak']
-        )
-        
-        if features_to_plot:
-            # Create distribution plots
-            for feature in features_to_plot:
-                st.markdown(f"<h4>{feature} Distribution by Heart Disease</h4>", unsafe_allow_html=True)
-                
-                # Choose plot type based on feature uniqueness
-                if df[feature].nunique() <= 5:
-                    # For categorical features
-                    fig = px.histogram(
-                        df,
-                        x=feature,
-                        color='target',
-                        barmode='group',
-                        color_discrete_map={0: '#91C4F2', 1: '#FF9999'},
-                        labels={'target': 'Heart Disease'},
-                        category_orders={feature: sorted(df[feature].unique())}
-                    )
-                else:
-                    # For continuous features
-                    fig = px.histogram(
-                        df,
-                        x=feature,
-                        color='target',
-                        marginal='box',
-                        opacity=0.7,
-                        color_discrete_map={0: '#91C4F2', 1: '#FF9999'},
-                        labels={'target': 'Heart Disease'}
-                    )
-                
-                st.plotly_chart(fig, use_container_width=True)
-        
-        # Scatter plot of selected features
-        if len(features_to_plot) >= 2:
-            st.markdown("<h3>Relationship Between Selected Features</h3>", unsafe_allow_html=True)
+        # Create bins for histogram
+        if df[selected_feature].nunique() <= 5:
+            # For categorical features, use value counts
+            pos_counts = positive_values.value_counts().sort_index()
+            neg_counts = negative_values.value_counts().sort_index()
             
-            # Select two features for scatter plot
-            x_feature = st.selectbox("X-axis feature:", options=features_to_plot, index=0)
-            y_feature = st.selectbox("Y-axis feature:", options=features_to_plot, index=min(1, len(features_to_plot)-1))
+            # Create a simple HTML table for categorical values
+            st.markdown("<div style='overflow-x: auto;'>", unsafe_allow_html=True)
+            st.markdown("<table style='width: 100%; border-collapse: collapse;'>", unsafe_allow_html=True)
+            st.markdown("<tr><th style='padding: 8px; text-align: left; border-bottom: 1px solid #ddd;'>Value</th><th style='padding: 8px; text-align: left; border-bottom: 1px solid #ddd;'>Heart Disease</th><th style='padding: 8px; text-align: left; border-bottom: 1px solid #ddd;'>No Disease</th></tr>", unsafe_allow_html=True)
             
-            fig = px.scatter(
-                df,
-                x=x_feature,
-                y=y_feature,
-                color='target',
-                color_discrete_map={0: '#91C4F2', 1: '#FF9999'},
-                labels={'target': 'Heart Disease'},
-                title=f"{x_feature} vs {y_feature} by Heart Disease Status",
-                opacity=0.7,
-                size_max=10,
-                render_mode='webgl'
-            )
-            st.plotly_chart(fig, use_container_width=True)
+            for value in sorted(df[selected_feature].unique()):
+                pos_count = pos_counts.get(value, 0)
+                neg_count = neg_counts.get(value, 0)
+                st.markdown(f"<tr><td style='padding: 8px; text-align: left; border-bottom: 1px solid #ddd;'>{value}</td><td style='padding: 8px; text-align: left; border-bottom: 1px solid #ddd;'>{pos_count}</td><td style='padding: 8px; text-align: left; border-bottom: 1px solid #ddd;'>{neg_count}</td></tr>", unsafe_allow_html=True)
+            
+            st.markdown("</table>", unsafe_allow_html=True)
+            st.markdown("</div>", unsafe_allow_html=True)
+        else:
+            # For continuous features, describe by target
+            st.write("*By Heart Disease Status:*")
+            st.write(df.groupby('target')[selected_feature].describe())
+            
+            # Show correlation with target
+            correlation = df[[selected_feature, 'target']].corr().iloc[0, 1]
+            st.write(f"*Correlation with Heart Disease:* {correlation:.3f}")
+            
+            # Show risk by quartiles
+            st.markdown("<h4>Risk by Quartiles</h4>", unsafe_allow_html=True)
+            
+            quartiles = pd.qcut(df[selected_feature], 4, duplicates='drop')
+            risk_by_quartile = df.groupby(quartiles)['target'].mean()
+            
+            for i, (group, risk) in enumerate(risk_by_quartile.items()):
+                st.markdown(f"""
+                <div class="feature-bar">
+                    <div class="feature-fill" style="width: {risk * 100}%">
+                        {group}: {risk:.2f}
+                    </div>
+                </div>
+                """, unsafe_allow_html=True)
 
 # Footer
 st.markdown("---")
 st.markdown("""
 <div style="text-align: center">
-    <p>© 2025 Heart Disease Prediction App | Developed with ❤️ using Streamlit</p>
+    <p>© 2025 Heart Disease Prediction App | Developed with ❤ using Streamlit</p>
 </div>
 """, unsafe_allow_html=True)
