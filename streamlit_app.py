@@ -97,7 +97,7 @@ with st.sidebar:
     
     The model used is a Random Forest classifier trained on the Heart Disease UCI dataset.
     
-    Made with ❤ by Your Healthcare AI Team
+    Made with ❤️ by Your Healthcare AI Team
     """)
 
 # Function to load data and model
@@ -211,9 +211,9 @@ if page == "Prediction":
         col1, col2 = st.columns(2)
         for i, (key, value) in enumerate(user_input.items()):
             if i % 2 == 0:
-                col1.write(f"{key}: {value}")
+                col1.write(f"**{key}**: {value}")
             else:
-                col2.write(f"{key}: {value}")
+                col2.write(f"**{key}**: {value}")
         
         st.markdown("</div>", unsafe_allow_html=True)
     
@@ -236,7 +236,7 @@ if page == "Prediction":
             if prediction == 1:
                 st.markdown(f"""
                 <div class='result-box positive-result'>
-                    <h3>⚠ Heart Disease Detected</h3>
+                    <h3>⚠️ Heart Disease Detected</h3>
                     <p>The model predicts a <b>{prediction_proba:.1%}</b> probability of heart disease.</p>
                     <p><b>Recommendation:</b> Further cardiac evaluation is strongly recommended.</p>
                 </div>
@@ -303,7 +303,7 @@ elif page == "Model Metrics":
     # Display metrics in a nicer format
     col1, col2, col3 = st.columns(3)
     
-   with col1:
+    with col1:
         st.markdown("""
         <div class="metric-container">
             <div class="metric-value">{:.2%}</div>
@@ -395,7 +395,7 @@ elif page == "Model Metrics":
     st.markdown("<h3>Feature Descriptions</h3>", unsafe_allow_html=True)
     
     for feature, description in feature_descriptions.items():
-        st.markdown(f"{feature}: {description}")
+        st.markdown(f"**{feature}**: {description}")
 
 # Dataset Explorer Page
 else:
@@ -407,10 +407,10 @@ else:
     col1, col2 = st.columns([1, 1])
     
     with col1:
-        st.write(f"*Total Samples:* {len(df)}")
-        st.write(f"*Positive Cases:* {df['target'].sum()}")
-        st.write(f"*Negative Cases:* {len(df) - df['target'].sum()}")
-        st.write(f"*Number of Features:* {df.shape[1] - 1}")
+        st.write(f"**Total Samples:** {len(df)}")
+        st.write(f"**Positive Cases:** {df['target'].sum()}")
+        st.write(f"**Negative Cases:** {len(df) - df['target'].sum()}")
+        st.write(f"**Number of Features:** {df.shape[1] - 1}")
     
     with col2:
         # Create a simple HTML chart for target distribution
@@ -452,11 +452,11 @@ else:
         col1, col2 = st.columns(2)
         
         with col1:
-            st.write("*Missing Values:*")
+            st.write("**Missing Values:**")
             st.write(df.isnull().sum().to_dict())
         
         with col2:
-            st.write("*Data Types:*")
+            st.write("**Data Types:**")
             st.write(df.dtypes.astype(str).to_dict())
     
     else:  # Feature Analysis
@@ -466,7 +466,7 @@ else:
         selected_feature = st.selectbox("Select a feature to analyze:", X.columns)
         
         # Display basic statistics
-        st.write(f"*Statistics for {selected_feature}:*")
+        st.write(f"**Statistics for {selected_feature}:**")
         st.write(df[selected_feature].describe())
         
         # Create a simple histogram with HTML
@@ -496,12 +496,12 @@ else:
             st.markdown("</div>", unsafe_allow_html=True)
         else:
             # For continuous features, describe by target
-            st.write("*By Heart Disease Status:*")
+            st.write("**By Heart Disease Status:**")
             st.write(df.groupby('target')[selected_feature].describe())
             
             # Show correlation with target
             correlation = df[[selected_feature, 'target']].corr().iloc[0, 1]
-            st.write(f"*Correlation with Heart Disease:* {correlation:.3f}")
+            st.write(f"**Correlation with Heart Disease:** {correlation:.3f}")
             
             # Show risk by quartiles
             st.markdown("<h4>Risk by Quartiles</h4>", unsafe_allow_html=True)
@@ -522,6 +522,6 @@ else:
 st.markdown("---")
 st.markdown("""
 <div style="text-align: center">
-    <p>© 2025 Heart Disease Prediction App | Developed with ❤ using Streamlit</p>
+    <p>© 2025 Heart Disease Prediction App | Developed with ❤️ using Streamlit</p>
 </div>
 """, unsafe_allow_html=True)
