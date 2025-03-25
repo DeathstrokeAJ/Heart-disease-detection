@@ -177,9 +177,19 @@ if page == "Prediction":
         col4, col5 = st.columns(2)
         with col4:
             user_input["ca"] = st.selectbox("Major Vessels Count", [0, 1, 2, 3, 4], help=feature_descriptions["ca"])
-        with col5:
-            user_input["thal"] = st.selectbox("Thalassemia", [1, 2, 3], format_func=lambda x: ["Normal", "Fixed Defect", "Reversible Defect"][x], help=feature_descriptions["thal"])
         
+        with col5:
+            # Mapping for Thalassemia values
+            thal_mapping = {1: "Normal", 2: "Fixed Defect", 3: "Reversible Defect"}
+
+            # Selectbox for Thalassemia with corrected indexing
+            user_input["thal"] = st.selectbox(
+                "Thalassemia", 
+                options=[1, 2, 3], 
+                format_func=lambda x: thal_mapping.get(x, "Unknown"), 
+                help=feature_descriptions["thal"]
+            )
+
         st.markdown("</div>", unsafe_allow_html=True)
     
     else:  # Quick Sample Cases
@@ -249,6 +259,7 @@ if page == "Prediction":
                     <p><b>Recommendation:</b> Continue regular health check-ups.</p>
                 </div>
                 """, unsafe_allow_html=True)
+
             
             # Progress bar for risk visualization
             st.markdown("### Risk Level")
